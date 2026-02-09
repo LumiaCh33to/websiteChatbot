@@ -2,50 +2,58 @@ const express = require('express');
 const axios = require('axios');
 const app = express();
 
-const CLIENT_ID = 'gp762nuuoqcoxypju8c569th9wz7q5';
-const CLIENT_SECRET = 'dajopafajop3c83';
-const REDIRECT_URI = 'http://localhost:3000/auth/twitch/callback';
+
+// Environment Variables nutzen
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+const REDIRECT_URI = process.env.REDIRECT_URI;
+
+
+const PORT = process.env.PORT || 3000;
+
 
 app.use(express.static('public'));
 
+
+// Login Route
 app.get('/login', (req, res) => {
-  const scope = 'chat:read chat:edit';
-  const url = `https://id.twitch.tv/oauth2/authorize` +
-    `?client_id=${CLIENT_ID}` +
-    `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-    `&response_type=code` +
-    `&scope=${encodeURIComponent(scope)}`;
-
-  res.redirect(url);
+const scope = 'chat:read chat:edit';
+const url = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(scope)}`;
+res.redirect(url);
 });
 
+
+// Callback Route für Twitch OAuth
 app.get('/auth/twitch/callback', async (req, res) => {
-  const code = req.query.code;
-
-  try {
-    const response = await axios.post('https://id.twitch.tv/oauth2/token', null, {
-      params: {
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: REDIRECT_URI
-      }
-    });
-
-    const accessToken = response.data.access_token;
-
-    res.send(`
-      <h1>Login erfolgreich 🎉</h1>
-      <p>Access Token:</p>
-      <code>${accessToken}</code>
-    `);
-
-  } catch (err) {
-    res.send('OAuth Fehler');
-  }
+const code = req.query.code;
+try {
+const response = await axios.post('https://id.twitch.tv/oauth2/token', null, {
+params: {
+client_id: CLIENT_ID,
+client_secret: CLIENT_SECRET,
+code,
+grant_type: 'authorization_code',
+redirect_uri: REDIRECT_URI
+}
 });
 
-app.listen(3000, () => {
-  console.log('Server läuft auf http://localhost:3000');
+
+const accessToken = response.data.access_token;
+
+
+res.send(`
+<h1>Login erfolgreich 🎉</h1>
+<p>Access Token:</p>
+<code>${accessToken}</code>
+`);
+} catch (err) {
+console.error(err.response ? err.response.data : err);
+res.send('<h1>OAuth Fehler 😢</h1><p>Check logs.</p>');
+}
+});
+
+
+// Server starten
+app.listen(PORT, () => {
+console.log(`Server läuft auf Port ${PORT}`);
 });
